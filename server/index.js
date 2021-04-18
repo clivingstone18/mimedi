@@ -16,7 +16,8 @@ const AWS = require('aws-sdk');
 const request = require('request');
 const jwkToPem = require('jwk-to-pem');
 const jwt = require('jsonwebtoken');
-const fetchAlert = require('./alertScraper')
+const fetchAlert = require('./alertScraper');
+const { result } = require("lodash");
 global.fetch = require('node-fetch');
 
 const poolData = {    
@@ -35,35 +36,33 @@ app.get("/api/getAlerts", (req, res) => {
 
 // just login And register 
 
-function RegisterUser(){
-  var attributeList = [];
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"name",Value:"Prasad Jayashanka"}));
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"preferred_username",Value:"jay"}));
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"gender",Value:"male"}));
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"birthdate",Value:"1991-06-21"}));
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"address",Value:"CMB"}));
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"email",Value:"sampleEmail@gmail.com"}));
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"phone_number",Value:"+5412614324321"}));
-  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"custom:scope",Value:"admin"}));
+function RegisterUser(info){
+  let attributeList = [];
+  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"birthdate",Value:info.birthdate}));
+  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"gender",Value:info.gender}));
+  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"givenName",Value:info.givenName}));
+  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"custom:medicareNumber",Value:info.medicareNumber}));
+  attributeList.push(new AmazonCognitoIdentity.CognitoUserAttribute({Name:"custom:prefMedClinic",Value:info.prefMedClinic}));
 
-  userPool.signUp('sampleEmail@gmail.com', 'SamplePassword123', attributeList, null, function(err, result){
+  userPool.signUp(info.email, info.password, attributeList, null, function(err, result){
       if (err) {
           console.log(err);
           return;
       }
       cognitoUser = result.user;
       console.log('user name is ' + cognitoUser.getUsername());
+      return cognitoUser.getUsername();
   });
-}
+  
 
-function Login() {
+function Login(info) {
   var authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails({
-      Username : 'sampleEmail@gmail.com',
-      Password : 'SamplePassword123',
+      Username : info.email,
+      Password : info.password,
   });
 
   var userData = {
-      Username : 'sampleEmail@gmail.com',
+      Username : info.email,
       Pool : userPool
   };
   var cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
@@ -72,28 +71,15 @@ function Login() {
           console.log('access token + ' + result.getAccessToken().getJwtToken());
           console.log('id token + ' + result.getIdToken().getJwtToken());
           console.log('refresh token + ' + result.getRefreshToken().getToken());
+          return result;
       },
       onFailure: function(err) {
           console.log(err);
+          return result;
       },
 
   });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 app.get("/api/", (req, res) => {
@@ -112,6 +98,11 @@ app.post("/signIn", (req, res) => {
 app.post("/register", (req, res) => {
 
 });
+
+
+app.get("/attributes", (req,res) => {
+
+})
 
 
 
@@ -149,37 +140,6 @@ function getCommon(arr1, arr2) {
   }
 
   return common;
-}
-
-const filterInfoForSuburb = async (facilitiesList, optionsList, languagesList, suburbLink) => {
-    return new Promise((resolve, reject) => {
-        fetchSuburbsPracs(suburbLink)
-        .then(data => 
-           fetchAllInfoInASuburb(data)
-        )
-        .then((data) => {
-          // apply the filters //
-          data = data.filter((i) => {
-            // check BB.
-            if (
-                getCommon(i.pracLanguages, languagesList).length > 0 &&
-                getCommon(i.facilitiesList, facilitiesList).length > 0 
-              ) {
-
-                if (!optionsList.includes("TeleHealth") || 
-                optionsList.includes("TeleHealth") && i.teleHealth) {
-                  if (!optionsList.includes("Bulk Billing") || 
-                  optionsList.includes("Bulk Billing") && i.bulkBill)  {
-                    return i
-                  }
-
-                }
-              }
-            })
-            resolve(data);
-          
-    })
-})
 }
 
 app.post("/api/findPrac", (req, res) => {
@@ -246,3 +206,36 @@ app.post("/api/findPrac", (req, res) => {
 ;
 
 
+
+
+
+const filterInfoForSuburb = async (facilitiesList, optionsList, languagesList, suburbLink) => {
+  return new Promise((resolve, reject) => {
+      fetchSuburbsPracs(suburbLink)
+      .then(data => 
+         fetchAllInfoInASuburb(data)
+      )
+      .then((data) => {
+        // apply the filters //
+        data = data.filter((i) => {
+          // check BB.
+          if (
+              getCommon(i.pracLanguages, languagesList).length > 0 &&
+              getCommon(i.facilitiesList, facilitiesList).length > 0 
+            ) {
+
+              if (!optionsList.includes("TeleHealth") || 
+              optionsList.includes("TeleHealth") && i.teleHealth) {
+                if (!optionsList.includes("Bulk Billing") || 
+                optionsList.includes("Bulk Billing") && i.bulkBill)  {
+                  return i
+                }
+
+              }
+            }
+          })
+          resolve(data);
+        
+  })
+})
+}
