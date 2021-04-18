@@ -4,7 +4,7 @@ import { useHistory } from "react-router-dom";
 import moment from "moment";
 import Toolbar from "./ToolBar"
 import styled from 'styled-components'
-
+import {getAllApps} from "./Calendar"
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import {getTodaysEvents, getCompletedApps, addNewEvent} from "./Calendar"
 // Setup the localizer by providing the moment (or globalize) Object
@@ -12,7 +12,6 @@ import {getTodaysEvents, getCompletedApps, addNewEvent} from "./Calendar"
 const localizer = BigCalendar.momentLocalizer(moment); // or globalizeLocalizer
 
 const API_KEY = "AIzaSyBlj1VnMflja9kGA73CB4VQ1rHTa2-oOO4";
-
 
 const Btn = styled.button`
 padding: 0.3rem;
@@ -186,14 +185,6 @@ export const CalendarPage = () => {
             setOpCompleted(getCompletedApps(OpApps));
             setPsychCompleted(getCompletedApps(psychApps));
             setGynoCompleted(getCompletedApps(gynoApps))
-
-            console.log(getCompletedApps(gynoApps))
-            console.log(getCompletedApps(GPApps))
-            console.log(getCompletedApps(DentApps))
-            console.log(getCompletedApps(OpApps))
-            console.log(getCompletedApps(psychApps))
-
-
           });
         });
     });
